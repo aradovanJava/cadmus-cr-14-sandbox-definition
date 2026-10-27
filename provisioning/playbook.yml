@@ -401,6 +401,7 @@
       ansible.windows.win_shell: |
         icacls '{{ cr14_lab_dir }}' /setowner {{ cr14_trainee_user }} /T /C /Q | Out-Null
         icacls '{{ cr14_lab_dir }}' /grant '{{ cr14_trainee_user }}:(OI)(CI)F' /T /C /Q | Out-Null
+        & 'C:\Program Files\Git\cmd\git.exe' config --system --replace-all safe.directory '*'
       changed_when: false
 
     - name: README on the desktop

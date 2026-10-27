@@ -3,10 +3,13 @@
 # Everything an instructor is likely to change lives here.
 
 # --- Trainee account (same on all three machines) ----------------------------
-# Lab-only credential for a disposable, isolated sandbox. Do not reuse it
-# anywhere else (SAFETY.md, rule 3).
-cr14_trainee_user: trainee
-cr14_trainee_password: "Cadmus-CR14!"
+# The platform's networking stage already creates "user" / "Password123"
+# (administrator / sudo) on every user-accessible host, and the platform's
+# remote access uses that account. The lab is therefore set up for the same
+# account; changing the password here would lock the platform's console and
+# remote-desktop access out. Lab-only credential - never reuse it elsewhere.
+cr14_trainee_user: user
+cr14_trainee_password: "Password123"
 
 # --- Addressing (must match topology.yml) ------------------------------------
 cr14_ip_sc1: 10.10.10.10
@@ -24,7 +27,7 @@ cr14_app_dir: C:\Lab\cadmus-vulnshop-cr
 # true  : SonarQube and ZAP are running when the trainee logs in.
 # false : images are pre-pulled but containers are only created, so the
 #         trainee starts them as part of levels A1 / A3
-#         (ssh trainee@owz1 / sq1, then: cd /opt/cr14 && docker compose up -d).
+#         (ssh user@owz1 / sq1, then: cd /opt/cr14 && docker compose up -d).
 cr14_autostart_tools: true
 
 # SonarQube Community Build. Tried in order; the first image that pulls is

@@ -47,7 +47,7 @@ the desktop and an environment check at `C:\Lab\verify-cr-env.ps1`.
 
 | | |
 |---|---|
-| Account on all three machines | `trainee` / `Cadmus-CR14!` (administrator on SC1, RDP enabled) |
+| Account on all three machines | `user` / `Password123` — the platform's standard sandbox account (administrator on SC1 with RDP, sudo + docker on SQ1/OWZ1) |
 | SonarQube | `http://localhost:9000` on SC1 (forwarded to SQ1); first login `admin` / `admin`, then a forced password change |
 | OWASP ZAP desktop | `http://owz1:8080/zap/` from SC1; proxy/API on `owz1:8090` |
 | Application from SC1 | `http://127.0.0.1:8080/shop` after `tools\run-app.ps1` |
@@ -74,7 +74,7 @@ Credentials and every other tunable are in `provisioning/group_vars/all.yml`.
 4. **Tools are started for the trainee by default** (`cr14_autostart_tools: true`).
    Set it to `false` if levels A1/A3 should include starting them: images are
    then pre-pulled and containers created but not started, and the trainee
-   runs `ssh trainee@owz1` / `ssh trainee@sq1`, `cd /opt/cr14 && docker compose up -d`.
+   runs `ssh user@owz1` / `ssh user@sq1`, `cd /opt/cr14 && docker compose up -d`.
 5. **SonarQube is pulled from the ECR Public mirror of the Docker Official
    Image first**, falling back to Docker Hub, because a pool of sandboxes
    pulling anonymously from Docker Hub runs into its rate limit.
