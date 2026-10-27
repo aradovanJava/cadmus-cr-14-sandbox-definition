@@ -1,0 +1,34 @@
+# CADMUS-CR-14 · VM2 / OWZ1 · DAST tool (OWASP ZAP, desktop UI via Webswing)
+# Managed by the sandbox provisioning - edits are lost on re-provisioning.
+#
+#   cd /opt/cr14 && docker compose up -d      # start
+#
+# From SC1:
+#   ZAP desktop in the browser   http://owz1:8080/zap/
+#   ZAP proxy / API              owz1:8090
+#   Application under test       http://sc1:8080/shop
+#
+# ZAP itself only starts once http://owz1:8080/zap/ has been opened.
+# Reports and session files saved to /zap/wrk appear in /opt/cr14/zap-wrk.
+
+services:
+  zap:
+    image: {{ cr14_zap_image }}
+    container_name: cadmus-zap
+    user: zap
+    command: zap-webswing.sh
+    restart: unless-stopped
+    environment:
+      ZAP_WEBSWING_OPTS: >-
+        -host 0.0.0.0 -port 8090
+        -config api.disablekey=true
+        -config api.addrs.addr.name=.*
+        -config api.addrs.addr.regex=true
+    ports:
+      - "8080:8080"
+      - "8090:8090"
+    extra_hosts:
+      - "sc1:{{ cr14_ip_sc1 }}"
+      - "sq1:{{ cr14_ip_sq1 }}"
+    volumes:
+      - /opt/cr14/zap-wrk:/zap/wrk:rw

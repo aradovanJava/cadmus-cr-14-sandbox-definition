@@ -1,0 +1,38 @@
+# CADMUS-CR-14 · VM3 / SQ1 · SAST server (SonarQube Community Build)
+# Managed by the sandbox provisioning - edits are lost on re-provisioning.
+#
+#   cd /opt/cr14 && docker compose up -d      # start
+#   docker compose logs -f sonarqube          # follow start-up (1-3 min)
+#
+# First login: admin / admin, then SonarQube forces a new password. Use a
+# throwaway one - this instance is disposable.
+#
+# Port 9000 is published on the lab LAN so that SC1 can reach it. On SC1 it
+# is also forwarded to http://localhost:9000, which is the URL the lab
+# scripts in cadmus-vulnshop-cr expect.
+
+services:
+  sonarqube:
+    image: {{ cr14_sonarqube_image }}
+    container_name: cadmus-sonarqube
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_logs:/opt/sonarqube/logs
+      - sonar_extensions:/opt/sonarqube/extensions
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
+      nproc:
+        soft: 8192
+        hard: 8192
+
+volumes:
+  sonar_data:
+  sonar_logs:
+  sonar_extensions:

@@ -1,0 +1,55 @@
+CADMUS-CR-14  -  Secure Coding Java  -  Cyber Range sandbox
+============================================================
+
+You are logged in to SC1, the developer workstation (VM1).
+
+Machines in this sandbox
+------------------------
+  SC1   {{ cr14_ip_sc1 }}   Windows 11, this machine: IntelliJ IDEA, JDK 25, Maven,
+                       Git, Node.js, Snyk CLI, SQLMap, Postman
+  SQ1   {{ cr14_ip_sq1 }}   SonarQube (SAST) in Docker
+  OWZ1  {{ cr14_ip_owz1 }}   OWASP ZAP (DAST) in Docker
+
+Account on all three machines:  {{ cr14_trainee_user }} / {{ cr14_trainee_password }}
+
+Where things are
+----------------
+  Application source         {{ cr14_app_dir }}
+  Lab guide (CR1)            {{ cr14_app_dir }}\lab\LAB_GUIDE.md
+  Findings template          {{ cr14_app_dir }}\lab\FINDINGS.md
+  Environment check          powershell -ExecutionPolicy Bypass -File {{ cr14_lab_dir }}\verify-cr-env.ps1
+  Extra command-line tools   C:\Tools\bin  (snyk, sqlmap)
+
+URLs (open them in the browser on SC1)
+--------------------------------------
+  SonarQube                  http://localhost:9000       (forwarded to SQ1:9000)
+  OWASP ZAP desktop          http://owz1:8080/zap/
+  VulnShop, from SC1         http://127.0.0.1:8080/shop  (after tools\run-app.ps1)
+  VulnShop, as ZAP sees it   http://sc1:8080/shop        (use THIS as the ZAP target)
+
+Differences from the lab guide
+------------------------------
+* SonarQube already runs on SQ1, so skip "docker compose up -d sonarqube".
+  http://localhost:9000 on SC1 reaches it, which means tools\scan-sonar.ps1
+  works unchanged. First login: admin / admin, then set a throwaway password.
+* tools\verify-env.ps1 reports docker as MISSING on SC1. That is expected:
+  in this sandbox Docker runs on SQ1 and OWZ1. Use verify-cr-env.ps1 instead.
+* ZAP runs on another machine, so it cannot reach 127.0.0.1 on SC1. The
+  application still binds to 127.0.0.1 only. SC1 forwards port 8080 on
+  {{ cr14_ip_sc1 }} to it, and the Windows firewall admits that port from OWZ1
+  ({{ cr14_ip_owz1 }}) and nothing else. Do not change server.address.
+* To look at the containers:  ssh {{ cr14_trainee_user }}@sq1   or   ssh {{ cr14_trainee_user }}@owz1
+  then:  cd /opt/cr14 && docker compose ps
+
+Level E1 (CI/CD pipeline)
+-------------------------
+GitHub Actions run on GitHub, not in this sandbox. Fork
+{{ cr14_app_repo | regex_replace('\\.git$', '') }}
+to your own GitHub account, clone the fork, and complete
+.github/workflows/security-pipeline.yml there.
+
+Safety
+------
+VulnShop is deliberately exploitable, including a remote code execution path.
+Read {{ cr14_app_dir }}\SAFETY.md before running it, and never run it outside
+this sandbox.

@@ -1,0 +1,54 @@
+# CADMUS-CR-14 · Secure Coding Java · sandbox variables
+#
+# Everything an instructor is likely to change lives here.
+
+# --- Trainee account (same on all three machines) ----------------------------
+# Lab-only credential for a disposable, isolated sandbox. Do not reuse it
+# anywhere else (SAFETY.md, rule 3).
+cr14_trainee_user: trainee
+cr14_trainee_password: "Cadmus-CR14!"
+
+# --- Addressing (must match topology.yml) ------------------------------------
+cr14_ip_sc1: 10.10.10.10
+cr14_ip_sq1: 10.10.10.20
+cr14_ip_owz1: 10.10.10.30
+
+# --- Application under test ---------------------------------------------------
+# Cloned onto SC1 during provisioning. Trainees fork this repository on their
+# own GitHub account for level E1 (GitHub Actions).
+cr14_app_repo: https://github.com/aradovanJava/cadmus-vulnshop-cr.git
+cr14_lab_dir: C:\Lab
+cr14_app_dir: C:\Lab\cadmus-vulnshop-cr
+
+# --- Analysis tools on SQ1 / OWZ1 ---------------------------------------------
+# true  : SonarQube and ZAP are running when the trainee logs in.
+# false : images are pre-pulled but containers are only created, so the
+#         trainee starts them as part of levels A1 / A3
+#         (ssh trainee@owz1 / sq1, then: cd /opt/cr14 && docker compose up -d).
+cr14_autostart_tools: true
+
+# SonarQube Community Build. Tried in order; the first image that pulls is
+# used. The ECR Public mirror of the Docker Official Image comes first because
+# a whole pool pulling from Docker Hub anonymously hits its rate limit.
+cr14_sonarqube_images:
+  - public.ecr.aws/docker/library/sonarqube:community
+  - docker.io/library/sonarqube:community
+
+cr14_zap_image: ghcr.io/zaproxy/zaproxy:stable
+
+# --- SC1 software stack (framework section 2.1, VM1) --------------------------
+cr14_jdk_msi_url: https://download.oracle.com/java/25/latest/jdk-25_windows-x64_bin.msi
+cr14_snyk_url: https://static.snyk.io/cli/latest/snyk-win.exe
+cr14_sqlmap_repo: https://github.com/sqlmapproject/sqlmap.git
+
+# Installed with Chocolatey, machine-wide, in this order.
+cr14_choco_packages:
+  - git
+  - maven
+  - nodejs-lts
+  - python
+  - intellijidea-ultimate
+
+# Postman's installer is per-user only, so it is installed in the trainee's
+# own profile. A failure here is reported but does not fail the sandbox.
+cr14_install_postman: true
