@@ -17,11 +17,14 @@ hosts:
   - name: sc1
     flavor: c4_r8_d60
     base_box:
-      image: windows-11-x86_64
+      # Framework table 2.1 asks for Windows 11 Enterprise. On
+      # cr.cybersecurity-training.cti.gr the windows-11-x86_64 image never
+      # answered the platform, neither over WinRM (allocation 1368) nor over
+      # SSH (allocation 1369), so SC1 runs Windows Server 2025 - same 24H2
+      # code base and desktop - which cr09 uses successfully over SSH.
+      # Switch back to windows-11-x86_64 once the image is fixed.
+      image: windows-server-2025-x86_64
       mgmt_user: windows
-      # The Windows images published on cr.cybersecurity-training.cti.gr on
-      # 23 Sep 2026 are managed over SSH: with winrm, SC1 never answered on
-      # port 5986 (allocation 1368). cr09 (Windows Server 2025) does the same.
       mgmt_protocol: ssh
     hidden: false
 

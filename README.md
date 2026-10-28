@@ -31,7 +31,7 @@ a deliberately vulnerable Spring Boot 4 / Java 25 storefront.
 
 | Host | Framework ID | Image | Flavor | Role |
 |---|---|---|---|---|
-| `sc1` | VM1 · SC1 | `windows-11-x86_64` | `c4_r8_d60` | Developer workstation, RDP access |
+| `sc1` | VM1 · SC1 | `windows-server-2025-x86_64` | `c4_r8_d60` | Developer workstation, RDP access |
 | `sq1` | VM3 · SQ1 | `ubuntu-noble-x86_64` | `c4_r8_d40` | SonarQube Community Build in Docker |
 | `owz1` | VM2 · OWZ1 | `ubuntu-noble-x86_64` | `c2_r4_d40` | OWASP ZAP in Docker (desktop UI via Webswing) |
 | `router` | — | `debian-12-x86_64` | `standard.small` | Gateway |
@@ -120,14 +120,16 @@ provisioning/
 
 ## Notes for instructors
 
-- SC1 needs a Windows image whose GUI flag is set: the sandbox service derives
-  each host's `gui_access` from it, and without it no remote desktop is
-  offered to trainees. On cr.cybersecurity-training.cti.gr this is true for
-  `windows-11-x86_64` (checked 28 Oct 2026).
-- SC1 is managed over SSH (`mgmt_protocol: ssh`), not WinRM. On this platform
-  the Windows 11 image never opened the WinRM listener (allocation 1368 timed
-  out after 1600 s on port 5986), whereas SSH management of the same image
-  generation is what cr09 uses successfully.
+- **SC1 runs Windows Server 2025 instead of Windows 11 (temporary).** The
+  framework asks for Windows 11 Enterprise, but on cr.cybersecurity-training.cti.gr
+  the `windows-11-x86_64` image boots without ever answering the platform's
+  management connection: allocation 1368 timed out on WinRM (port 5986) and
+  allocation 1369 on SSH. `windows-server-2025-x86_64` shares the Windows 11
+  24H2 code base and desktop, carries the GUI flag, and is what cr09 uses
+  successfully over SSH. Revert the image line in `topology.yml` once the
+  Windows 11 image is fixed by the platform administrators.
+- SC1 is managed over SSH (`mgmt_protocol: ssh`), as the Windows images of
+  this platform generation expect.
 - IntelliJ IDEA Ultimate starts in its trial/free mode; activate an
   educational licence if the course needs Ultimate-only features.
 - Snyk requires a free account: trainees run `snyk auth` once.

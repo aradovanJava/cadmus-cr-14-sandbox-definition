@@ -3,7 +3,7 @@
 #
 #   sq1   VM3  SonarQube (SAST) in Docker   Ubuntu 24.04
 #   owz1  VM2  OWASP ZAP (DAST) in Docker   Ubuntu 24.04
-#   sc1   VM1  developer workstation        Windows 11, RDP
+#   sc1   VM1  developer workstation        Windows (see topology.yml), RDP
 #
 # The Linux hosts go first: they are quick, and it lets SonarQube finish its
 # first start-up while the Windows workstation is still being provisioned.
@@ -201,9 +201,9 @@
       when: cr14_autostart_tools
 
 # =============================================================================
-#  SC1 (VM1) - Windows 11 developer workstation
+#  SC1 (VM1) - Windows developer workstation
 # =============================================================================
-- name: SC1 (VM1) - Windows 11 developer workstation
+- name: SC1 (VM1) - Windows developer workstation
   hosts: sc1
   gather_facts: false
 
