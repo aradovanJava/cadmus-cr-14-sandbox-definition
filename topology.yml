@@ -19,7 +19,10 @@ hosts:
     base_box:
       image: windows-11-x86_64
       mgmt_user: windows
-      mgmt_protocol: winrm
+      # The Windows images published on cr.cybersecurity-training.cti.gr on
+      # 23 Sep 2026 are managed over SSH: with winrm, SC1 never answered on
+      # port 5986 (allocation 1368). cr09 (Windows Server 2025) does the same.
+      mgmt_protocol: ssh
     hidden: false
 
   - name: sq1

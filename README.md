@@ -124,6 +124,10 @@ provisioning/
   each host's `gui_access` from it, and without it no remote desktop is
   offered to trainees. On cr.cybersecurity-training.cti.gr this is true for
   `windows-11-x86_64` (checked 28 Oct 2026).
+- SC1 is managed over SSH (`mgmt_protocol: ssh`), not WinRM. On this platform
+  the Windows 11 image never opened the WinRM listener (allocation 1368 timed
+  out after 1600 s on port 5986), whereas SSH management of the same image
+  generation is what cr09 uses successfully.
 - IntelliJ IDEA Ultimate starts in its trial/free mode; activate an
   educational licence if the course needs Ultimate-only features.
 - Snyk requires a free account: trainees run `snyk auth` once.

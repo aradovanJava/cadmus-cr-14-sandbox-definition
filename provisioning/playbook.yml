@@ -208,7 +208,7 @@
   gather_facts: false
 
   pre_tasks:
-    - name: Wait for the PSRP listener to accept connections
+    - name: Wait until SC1 accepts management connections
       ansible.builtin.wait_for_connection:
         delay: 0
         sleep: 10
