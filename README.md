@@ -1,6 +1,6 @@
 # CADMUS-CR-14 · Secure Coding Java — sandbox definition
 
-Sandbox definition for the CyberRangeᶜᶻ platform (cr.cybersec.upatras.gr) used by
+Sandbox definition for the CADMUS CyberRangeᶜᶻ platform (cr.cybersecurity-training.cti.gr) used by
 the CADMUS bootcamp **BTCMP-02 Secure Coding**, Cyber Range course
 **CADMUS-CR-14 Secure Coding Java**.
 
@@ -31,7 +31,7 @@ a deliberately vulnerable Spring Boot 4 / Java 25 storefront.
 
 | Host | Framework ID | Image | Flavor | Role |
 |---|---|---|---|---|
-| `sc1` | VM1 · SC1 | `windows-11-bkp-x86_64` | `c4_r8_d60` | Developer workstation, RDP access |
+| `sc1` | VM1 · SC1 | `windows-11-x86_64` | `c4_r8_d60` | Developer workstation, RDP access |
 | `sq1` | VM3 · SQ1 | `ubuntu-noble-x86_64` | `c4_r8_d40` | SonarQube Community Build in Docker |
 | `owz1` | VM2 · OWZ1 | `ubuntu-noble-x86_64` | `c2_r4_d40` | OWASP ZAP in Docker (desktop UI via Webswing) |
 | `router` | — | `debian-12-x86_64` | `standard.small` | Gateway |
@@ -120,12 +120,10 @@ provisioning/
 
 ## Notes for instructors
 
-- SC1 uses `windows-11-bkp-x86_64` because it is the Windows 11 image the
-  platform marks with *GUI access: Yes*. `windows-11-x86_64` (uploaded
-  27 Sep 2026) is marked *GUI access: No*, and with it the sandbox service
-  reports `gui_access: false` for SC1, so no remote desktop is offered to
-  trainees. Once the platform administrators set the GUI flag on
-  `windows-11-x86_64`, switching back is a one-line change in `topology.yml`.
+- SC1 needs a Windows image whose GUI flag is set: the sandbox service derives
+  each host's `gui_access` from it, and without it no remote desktop is
+  offered to trainees. On cr.cybersecurity-training.cti.gr this is true for
+  `windows-11-x86_64` (checked 28 Oct 2026).
 - IntelliJ IDEA Ultimate starts in its trial/free mode; activate an
   educational licence if the course needs Ultimate-only features.
 - Snyk requires a free account: trainees run `snyk auth` once.
