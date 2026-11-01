@@ -136,7 +136,9 @@ provisioning/
   `group_vars/all.yml` (a full commit SHA of `cadmus-vulnshop-cr`). Sandboxes
   built before 1 Nov 2026 cloned a commit that does not compile on Spring
   Boot 4 (`ErrorController` moved to `org.springframework.boot.webmvc.error`);
-  `1c3b3ce` fixes it. Change the SHA only together with a new definition.
+  `1c3b3ce` fixes it, and `8988c1b` adds the shop-page link through which
+  the ZAP spider reaches `/api/products/search` (level A2). Change the SHA
+  only together with a new definition.
 - **PATH on SC1.** On the first sandboxes only the folders at the front of the
   machine PATH resolved in the trainee's session (java via Oracle javapath,
   python); Git, Node.js, Maven, the JDK `bin` and `C:\Tools\bin` were

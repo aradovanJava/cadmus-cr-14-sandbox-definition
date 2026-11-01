@@ -28,7 +28,10 @@ cr14_app_dir: C:\Lab\cadmus-vulnshop-cr
 #   1c3b3ce - Spring Boot 4 build fix (ErrorController moved to
 #             org.springframework.boot.webmvc.error). Before it the
 #             application did not compile.
-cr14_app_version: 1c3b3cec4556c49dbdca782cd2422c21c623f604
+#   8988c1b - "JSON" link from the shop page to /api/products/search, so the
+#             ZAP spider reaches the SQL injection that level A2 asks for
+#             (verified: ZAP full scan reports SQL Injection 40018 there).
+cr14_app_version: 8988c1b083afe01904cf3159eed7c692f3a95c89
 
 # --- Analysis tools on SQ1 / OWZ1 ---------------------------------------------
 # true  : SonarQube and ZAP are running when the trainee logs in.
