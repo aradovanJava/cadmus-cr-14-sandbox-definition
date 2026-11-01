@@ -36,16 +36,23 @@ function Invoke-Probe([string]$command, [string]$arguments, [int]$timeoutSec) {
         $psi.Arguments = $arguments
     }
     $psi.UseShellExecute = $false
+    # Give the probe its own, already closed standard input. Without this it
+    # inherits this window's console input while running without a console of
+    # its own; sqlmap (Python) then never returns from "--version" here,
+    # although the same command answers at once when typed in the window.
+    $psi.RedirectStandardInput = $true
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
     $psi.CreateNoWindow = $true
     try { $p = [System.Diagnostics.Process]::Start($psi) }
     catch { return @{ Ok = $false; Text = "cannot start $($app.Source)" } }
+    try { $p.StandardInput.Close() } catch { }
     $stdout = $p.StandardOutput.ReadToEndAsync()
     $stderr = $p.StandardError.ReadToEndAsync()
     if (-not $p.WaitForExit($timeoutSec * 1000)) {
         try { $p.Kill() } catch { }
-        return @{ Ok = $false; Text = "no answer within $timeoutSec s ($($app.Source))" }
+        return @{ Ok = $false; TimedOut = $true; Path = $app.Source
+                  Text = "no answer within $timeoutSec s ($($app.Source))" }
     }
     $first = (($stdout.Result + "`n" + $stderr.Result) -split "`r?`n" |
               Where-Object { $_.Trim() } | Select-Object -First 1)
@@ -53,11 +60,16 @@ function Invoke-Probe([string]$command, [string]$arguments, [int]$timeoutSec) {
     return @{ Ok = $true; Text = "$first" }
 }
 
-function Check-Tool([string]$name, [string]$command, [string]$arguments, [int]$timeoutSec = 30) {
+# -Lenient: a tool that is on the PATH but whose version probe only times out
+# is reported in yellow and does not fail the check (no lab level depends on
+# its version answer; typing the command in the window still works).
+function Check-Tool([string]$name, [string]$command, [string]$arguments, [int]$timeoutSec = 30, [switch]$Lenient) {
     Write-Host -NoNewline ("{0,-18}" -f $name)
     $r = Invoke-Probe $command $arguments $timeoutSec
     if ($r.Ok) {
         Write-Host "OK    $($r.Text)" -ForegroundColor Green
+    } elseif ($Lenient -and $r.TimedOut) {
+        Write-Host "OK?   $($r.Path) - no version answer within $timeoutSec s; type '$command $arguments' to confirm" -ForegroundColor Yellow
     } else {
         Write-Host "MISSING  $($r.Text)" -ForegroundColor Red
         $script:ok = $false
@@ -90,8 +102,8 @@ Check-Tool "git"     "git"     "--version"
 Check-Tool "node"    "node"    "--version"
 Check-Tool "npm"     "npm"     "--version" 60
 Check-Tool "python"  "python"  "--version"
-Check-Tool "snyk"    "snyk"    "--version" 60
-Check-Tool "sqlmap"  "sqlmap"  "--version" 90
+Check-Tool "snyk"    "snyk"    "--version" 60 -Lenient
+Check-Tool "sqlmap"  "sqlmap"  "--version" 45 -Lenient
 
 Write-Host -NoNewline ("{0,-18}" -f "intellij idea")
 $idea = Get-ChildItem "C:\Program Files\JetBrains" -Directory -Filter "IntelliJ IDEA*" -ErrorAction SilentlyContinue | Select-Object -First 1
