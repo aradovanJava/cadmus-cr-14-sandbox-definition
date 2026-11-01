@@ -31,7 +31,12 @@ cr14_app_dir: C:\Lab\cadmus-vulnshop-cr
 #   8988c1b - "JSON" link from the shop page to /api/products/search, so the
 #             ZAP spider reaches the SQL injection that level A2 asks for
 #             (verified: ZAP full scan reports SQL Injection 40018 there).
-cr14_app_version: 8988c1b083afe01904cf3159eed7c692f3a95c89
+#   e9e2089 - SonarScanner for Maven pinned (5.6.0.6792) so "mvn sonar:sonar"
+#             in tools\scan-sonar.ps1 (A4) and the E1 pipeline works again,
+#             and the pom carries sonar.projectKey=cadmus-vulnshop-cr and the
+#             template inclusions (the Maven scanner ignores
+#             sonar-project.properties).
+cr14_app_version: e9e20892c40db981c074c465e75bc75d7b0c9d11
 
 # --- Analysis tools on SQ1 / OWZ1 ---------------------------------------------
 # true  : SonarQube and ZAP are running when the trainee logs in.
