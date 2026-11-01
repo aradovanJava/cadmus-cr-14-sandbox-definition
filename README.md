@@ -49,6 +49,7 @@ the desktop and an environment check at `C:\Lab\verify-cr-env.ps1`.
 |---|---|
 | Account on all three machines | `user` / `Password123` — the platform's standard sandbox account (administrator on SC1 with RDP, sudo + docker on SQ1/OWZ1) |
 | SonarQube | `http://localhost:9000` on SC1 (forwarded to SQ1); first login `admin` / `admin`, then a forced password change |
+| SonarQube analysis token (level A3) | `http://localhost:9000/account/security` (My Account → Security; also a desktop shortcut): Type *Global Analysis Token* → Generate. Fallback: Projects → Create Project → Local project, key `cadmus-vulnshop-cr`, Locally → Generate |
 | OWASP ZAP desktop | `http://owz1:8080/zap/` from SC1; proxy/API on `owz1:8090` |
 | Application from SC1 | `http://127.0.0.1:8080/shop` after `tools\run-app.ps1` |
 | Application as ZAP sees it | `http://sc1:8080/shop` |

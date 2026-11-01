@@ -477,6 +477,7 @@
         content: "[InternetShortcut]\r\nURL={{ item.url }}\r\n"
       loop:
         - { name: "SonarQube (SQ1)", url: "http://localhost:9000/" }
+        - { name: "SonarQube - analysis token (My Account, Security)", url: "http://localhost:9000/account/security" }
         - { name: "OWASP ZAP (OWZ1)", url: "http://owz1:8080/zap/" }
         - { name: "VulnShop (after run-app)", url: "http://127.0.0.1:8080/shop" }
 
