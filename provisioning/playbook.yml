@@ -293,12 +293,6 @@
       register: cr14_jdk
       changed_when: "'installed' in cr14_jdk.stdout"
 
-    - name: Add %JAVA_HOME%\bin to the machine PATH
-      ansible.windows.win_path:
-        elements: '%JAVA_HOME%\bin'
-        scope: machine
-        state: present
-
     - name: Snyk CLI
       ansible.windows.win_get_url:
         url: "{{ cr14_snyk_url }}"
@@ -344,6 +338,67 @@
       register: cr14_postman
       ignore_errors: true
 
+    # --- PATH and PowerShell start-up ------------------------------------------
+    # On the first sandboxes only the folders at the front of the machine PATH
+    # (Oracle javapath, Python) resolved in the trainee's session; everything
+    # the installers appended (Git, Node.js, Maven, the JDK bin via
+    # %JAVA_HOME%, C:\Tools\bin) was reported MISSING. The lab folders
+    # therefore go directly after the Windows folders, as literal paths, with
+    # duplicates and dead entries removed so the value stays short.
+    - name: Machine PATH - lab tools right after the Windows folders, literal paths, no duplicates
+      ansible.windows.win_shell: |
+        $ErrorActionPreference = 'Stop'
+        $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+        $raw = (Get-Item $key).GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+        $jdk = Get-ChildItem 'C:\Program Files\Java' -Directory -Filter 'jdk-25*' -ErrorAction SilentlyContinue |
+          Sort-Object Name -Descending | Select-Object -First 1
+        $mvn = Get-ChildItem 'C:\ProgramData\chocolatey\lib\maven' -Recurse -Filter 'mvn.cmd' -ErrorAction SilentlyContinue |
+          Select-Object -First 1
+        $lab = @()
+        if ($jdk) { $lab += Join-Path $jdk.FullName 'bin' }
+        if ($mvn) { $lab += $mvn.DirectoryName }
+        $lab += 'C:\Program Files\Git\cmd', 'C:\Program Files\nodejs', 'C:\Tools\bin', 'C:\ProgramData\chocolatey\bin'
+        $lab = @($lab | Where-Object { Test-Path $_ })
+        $seen = @{}
+        foreach ($e in $lab) { $seen[$e.TrimEnd('\').ToLowerInvariant()] = $true }
+        $system = @(); $rest = @()
+        foreach ($e in ($raw -split ';')) {
+          $e = $e.Trim()
+          if (-not $e -or $e -match '%JAVA_HOME%') { continue }
+          $k = [Environment]::ExpandEnvironmentVariables($e).TrimEnd('\').ToLowerInvariant()
+          if ($seen.ContainsKey($k)) { continue }
+          if ($e -notmatch '%' -and -not (Test-Path $e)) { continue }
+          $seen[$k] = $true
+          if ($e -match '^(%SystemRoot%|%windir%|C:\\Windows)(\\|$)') { $system += $e } else { $rest += $e }
+        }
+        $new = ($system + $lab + $rest) -join ';'
+        Set-ItemProperty -Path $key -Name Path -Value $new -Type ExpandString
+        "machine PATH: $(($system + $lab + $rest).Count) folders, $($new.Length) characters"
+        "lab folders: $($lab -join ' | ')"
+      register: cr14_path
+      changed_when: true
+
+    - name: Let PowerShell run local scripts (the lab scripts and the profile below)
+      ansible.windows.win_shell: Set-ExecutionPolicy RemoteSigned -Scope LocalMachine -Force
+      changed_when: false
+      failed_when: false
+
+    # Every PowerShell window (including IntelliJ's terminal and
+    # "powershell -File ...") starts from the PATH in the registry, so a
+    # window opened from an older desktop session still finds the tools.
+    - name: PowerShell profile for all users - start every window with the registry PATH
+      ansible.windows.win_copy:
+        dest: C:\Windows\System32\WindowsPowerShell\v1.0\profile.ps1
+        content: |
+          # CADMUS-CR-14: start every PowerShell window with the PATH and JAVA_HOME
+          # stored in the registry, not the copy inherited from the desktop session.
+          try {
+              $cr14JavaHome = [Environment]::GetEnvironmentVariable('JAVA_HOME', 'Machine')
+              if ($cr14JavaHome) { $env:JAVA_HOME = $cr14JavaHome }
+              $env:Path = (@([Environment]::GetEnvironmentVariable('Path', 'Machine'),
+                             [Environment]::GetEnvironmentVariable('Path', 'User')) | Where-Object { $_ }) -join ';'
+          } catch { }
+
     # --- networking between the three lab machines ---------------------------
     - name: Resolve the lab machines by name
       ansible.windows.win_shell: |
@@ -377,14 +432,21 @@
       changed_when: false
 
     # --- lab material ----------------------------------------------------------
-    - name: Clone the application under test
+    - name: Clone the application under test at the pinned commit (cr14_app_version)
       ansible.windows.win_shell: |
         $env:GIT_TERMINAL_PROMPT = '0'; $env:GCM_INTERACTIVE = 'never'
-        & 'C:\Program Files\Git\cmd\git.exe' clone --quiet {{ cr14_app_repo }} '{{ cr14_app_dir }}'
-        if ($LASTEXITCODE -ne 0) { throw "git clone failed with exit code $LASTEXITCODE" }
-      args:
-        creates: '{{ cr14_app_dir }}\pom.xml'
+        $git = 'C:\Program Files\Git\cmd\git.exe'
+        if (-not (Test-Path '{{ cr14_app_dir }}\.git')) {
+          & $git clone --quiet {{ cr14_app_repo }} '{{ cr14_app_dir }}'
+          if ($LASTEXITCODE -ne 0) { throw "git clone failed with exit code $LASTEXITCODE" }
+        }
+        & $git -C '{{ cr14_app_dir }}' fetch --quiet origin {{ cr14_app_version }}
+        if ($LASTEXITCODE -ne 0) { throw "git fetch {{ cr14_app_version }} failed with exit code $LASTEXITCODE" }
+        & $git -C '{{ cr14_app_dir }}' checkout --quiet --force -B main {{ cr14_app_version }}
+        if ($LASTEXITCODE -ne 0) { throw "git checkout {{ cr14_app_version }} failed with exit code $LASTEXITCODE" }
+        & $git -C '{{ cr14_app_dir }}' log -1 --format='%h %s'
       register: cr14_clone
+      changed_when: true
       retries: 3
       delay: 20
       until: cr14_clone is succeeded
@@ -431,10 +493,43 @@
         path: C:\Windows\Temp\cr14\jdk-25_windows-x64_bin.msi
         state: absent
 
+    # --- final checks -----------------------------------------------------------
+    # The management session is not a trainee sign-in, so build the
+    # environment a new sign-in gets (registry) and resolve every tool from it.
+    - name: Self-check - every lab tool resolves from the machine PATH
+      ansible.windows.win_shell: |
+        $env:JAVA_HOME = [Environment]::GetEnvironmentVariable('JAVA_HOME', 'Machine')
+        $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        $found = @(); $missing = @()
+        foreach ($t in 'java', 'javac', 'mvn', 'git', 'node', 'npm', 'python', 'snyk', 'sqlmap') {
+          $c = Get-Command $t -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($c) { $found += "$t=$($c.Source)" } else { $missing += $t }
+        }
+        $found -join ' | '
+        if ($missing) { throw "Not on the machine PATH: $($missing -join ', ')" }
+      register: cr14_selfcheck
+      changed_when: false
+
+    # A session of the trainee that already exists keeps the environment it
+    # was created with; signing it out makes the first real sign-in fresh.
+    - name: Sign out any session of the trainee left over from provisioning
+      ansible.windows.win_shell: |
+        foreach ($l in @(quser 2>$null | Select-Object -Skip 1)) {
+          $f = @($l.Trim().TrimStart('>') -split '\s+')
+          if ($f[0] -ieq '{{ cr14_trainee_user }}') {
+            $id = $f | Where-Object { $_ -match '^\d+$' } | Select-Object -First 1
+            if ($id) { logoff $id; "signed out session $id" }
+          }
+        }
+      changed_when: false
+      failed_when: false
+
     - name: Summary
       ansible.builtin.debug:
         msg:
           - "{{ cr14_jdk.stdout | trim }}"
+          - "{{ cr14_path.stdout_lines | default([]) }}"
+          - "{{ cr14_selfcheck.stdout | default('') | trim }}"
           - >-
             Postman: {{ 'skipped' if not cr14_install_postman
             else ('FAILED - install it manually as ' ~ cr14_trainee_user if cr14_postman is failed else 'installed') }}

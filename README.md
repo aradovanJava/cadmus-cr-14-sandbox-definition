@@ -132,6 +132,20 @@ provisioning/
   definition is created and does not pick up later commits on a branch.
   Create the definition with a commit SHA as the revision, and create a new
   definition (and pool) after changing the topology.
+- **The application is pinned** with `cr14_app_version` in
+  `group_vars/all.yml` (a full commit SHA of `cadmus-vulnshop-cr`). Sandboxes
+  built before 1 Nov 2026 cloned a commit that does not compile on Spring
+  Boot 4 (`ErrorController` moved to `org.springframework.boot.webmvc.error`);
+  `1c3b3ce` fixes it. Change the SHA only together with a new definition.
+- **PATH on SC1.** On the first sandboxes only the folders at the front of the
+  machine PATH resolved in the trainee's session (java via Oracle javapath,
+  python); Git, Node.js, Maven, the JDK `bin` and `C:\Tools\bin` were
+  reported MISSING. Provisioning now puts these folders directly after the
+  Windows folders as literal paths (no `%JAVA_HOME%`), removes duplicates,
+  installs an all-users PowerShell profile that reloads PATH from the
+  registry, signs out any leftover trainee session and fails the allocation
+  if a tool does not resolve. `verify-cr-env.ps1` reloads PATH itself,
+  reports a stale window and gives every probe a time limit.
 - IntelliJ IDEA Ultimate starts in its trial/free mode; activate an
   educational licence if the course needs Ultimate-only features.
 - Snyk requires a free account: trainees run `snyk auth` once.

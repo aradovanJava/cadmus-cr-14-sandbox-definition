@@ -22,6 +22,13 @@ cr14_ip_owz1: 10.10.10.30
 cr14_app_repo: https://github.com/aradovanJava/cadmus-vulnshop-cr.git
 cr14_lab_dir: C:\Lab
 cr14_app_dir: C:\Lab\cadmus-vulnshop-cr
+# Commit of the application that every sandbox gets, checked out as local
+# "main". Pin a full SHA so all sandboxes of a pool are identical, and change
+# it only together with a new sandbox definition.
+#   1c3b3ce - Spring Boot 4 build fix (ErrorController moved to
+#             org.springframework.boot.webmvc.error). Before it the
+#             application did not compile.
+cr14_app_version: 1c3b3cec4556c49dbdca782cd2422c21c623f604
 
 # --- Analysis tools on SQ1 / OWZ1 ---------------------------------------------
 # true  : SonarQube and ZAP are running when the trainee logs in.
