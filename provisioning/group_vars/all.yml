@@ -22,6 +22,21 @@ cr14_ip_owz1: 10.10.10.30
 cr14_app_repo: https://github.com/aradovanJava/cadmus-vulnshop-cr.git
 cr14_lab_dir: C:\Lab
 cr14_app_dir: C:\Lab\cadmus-vulnshop-cr
+# Commit of the application that every sandbox gets, checked out as local
+# "main". Pin a full SHA so all sandboxes of a pool are identical, and change
+# it only together with a new sandbox definition.
+#   1c3b3ce - Spring Boot 4 build fix (ErrorController moved to
+#             org.springframework.boot.webmvc.error). Before it the
+#             application did not compile.
+#   8988c1b - "JSON" link from the shop page to /api/products/search, so the
+#             ZAP spider reaches the SQL injection that level A2 asks for
+#             (verified: ZAP full scan reports SQL Injection 40018 there).
+#   e9e2089 - SonarScanner for Maven pinned (5.6.0.6792) so "mvn sonar:sonar"
+#             in tools\scan-sonar.ps1 (A4) and the E1 pipeline works again,
+#             and the pom carries sonar.projectKey=cadmus-vulnshop-cr and the
+#             template inclusions (the Maven scanner ignores
+#             sonar-project.properties).
+cr14_app_version: e9e20892c40db981c074c465e75bc75d7b0c9d11
 
 # --- Analysis tools on SQ1 / OWZ1 ---------------------------------------------
 # true  : SonarQube and ZAP are running when the trainee logs in.

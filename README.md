@@ -49,6 +49,7 @@ the desktop and an environment check at `C:\Lab\verify-cr-env.ps1`.
 |---|---|
 | Account on all three machines | `user` / `Password123` — the platform's standard sandbox account (administrator on SC1 with RDP, sudo + docker on SQ1/OWZ1) |
 | SonarQube | `http://localhost:9000` on SC1 (forwarded to SQ1); first login `admin` / `admin`, then a forced password change |
+| SonarQube analysis token (level A3) | `http://localhost:9000/account/security` (My Account → Security; also a desktop shortcut): Type *Global Analysis Token* → Generate. Fallback: Projects → Create Project → Local project, key `cadmus-vulnshop-cr`, Locally → Generate |
 | OWASP ZAP desktop | `http://owz1:8080/zap/` from SC1; proxy/API on `owz1:8090` |
 | Application from SC1 | `http://127.0.0.1:8080/shop` after `tools\run-app.ps1` |
 | Application as ZAP sees it | `http://sc1:8080/shop` |
@@ -132,6 +133,22 @@ provisioning/
   definition is created and does not pick up later commits on a branch.
   Create the definition with a commit SHA as the revision, and create a new
   definition (and pool) after changing the topology.
+- **The application is pinned** with `cr14_app_version` in
+  `group_vars/all.yml` (a full commit SHA of `cadmus-vulnshop-cr`). Sandboxes
+  built before 1 Nov 2026 cloned a commit that does not compile on Spring
+  Boot 4 (`ErrorController` moved to `org.springframework.boot.webmvc.error`);
+  `1c3b3ce` fixes it, and `8988c1b` adds the shop-page link through which
+  the ZAP spider reaches `/api/products/search` (level A2). Change the SHA
+  only together with a new definition.
+- **PATH on SC1.** On the first sandboxes only the folders at the front of the
+  machine PATH resolved in the trainee's session (java via Oracle javapath,
+  python); Git, Node.js, Maven, the JDK `bin` and `C:\Tools\bin` were
+  reported MISSING. Provisioning now puts these folders directly after the
+  Windows folders as literal paths (no `%JAVA_HOME%`), removes duplicates,
+  installs an all-users PowerShell profile that reloads PATH from the
+  registry, signs out any leftover trainee session and fails the allocation
+  if a tool does not resolve. `verify-cr-env.ps1` reloads PATH itself,
+  reports a stale window and gives every probe a time limit.
 - IntelliJ IDEA Ultimate starts in its trial/free mode; activate an
   educational licence if the course needs Ultimate-only features.
 - Snyk requires a free account: trainees run `snyk auth` once.

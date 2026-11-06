@@ -23,6 +23,8 @@ Where things are
 URLs (open them in the browser on SC1)
 --------------------------------------
   SonarQube                  http://localhost:9000       (forwarded to SQ1:9000)
+  SonarQube token page       http://localhost:9000/account/security
+                             (My Account > Security; level A3)
   OWASP ZAP desktop          http://owz1:8080/zap/
   VulnShop, from SC1         http://127.0.0.1:8080/shop  (after tools\run-app.ps1)
   VulnShop, as ZAP sees it   http://sc1:8080/shop        (use THIS as the ZAP target)
@@ -32,6 +34,13 @@ Differences from the lab guide
 * SonarQube already runs on SQ1, so skip "docker compose up -d sonarqube".
   http://localhost:9000 on SC1 reaches it, which means tools\scan-sonar.ps1
   works unchanged. First login: admin / admin, then set a throwaway password.
+* Analysis token for tools\scan-sonar.ps1 (level A3): open
+  http://localhost:9000/account/security directly - the Security tab of
+  My Account is easy to miss in a small window. Name: any, Type: Global
+  Analysis Token, then Generate and copy the sqp_... value at once (it is
+  shown only once). If that page shows no token form, use Projects > Create
+  Project > Local project with project key cadmus-vulnshop-cr (exactly), then
+  Locally > Generate: a project analysis token works with scan-sonar.ps1 too.
 * tools\verify-env.ps1 reports docker as MISSING on SC1. That is expected:
   in this sandbox Docker runs on SQ1 and OWZ1. Use verify-cr-env.ps1 instead.
 * ZAP runs on another machine, so it cannot reach 127.0.0.1 on SC1. The

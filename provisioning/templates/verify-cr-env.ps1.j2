@@ -6,18 +6,72 @@
 # that SonarQube runs on SQ1 and OWASP ZAP on OWZ1 rather than in a local
 # Docker. If anything reports MISSING or DOWN, tell your instructor before
 # starting the lab.
+#
+# The check first reloads PATH and JAVA_HOME from the registry. A desktop
+# session that was opened before the tools were installed keeps an old PATH,
+# and every window started from it inherits that PATH; this script reports
+# that case instead of reporting the tools as missing. Every probe has a time
+# limit, so a slow or hanging tool cannot stall the check.
 
 $ok = $true
 
-function Check-Tool([string]$name, [scriptblock]$probe) {
+# --- 1. PATH as stored in the registry ----------------------------------------
+$sessionPath = @($env:Path -split ';' | Where-Object { $_ } | ForEach-Object { $_.TrimEnd('\') })
+$machineJavaHome = [Environment]::GetEnvironmentVariable('JAVA_HOME', 'Machine')
+if ($machineJavaHome) { $env:JAVA_HOME = $machineJavaHome }
+$env:Path = (@([Environment]::GetEnvironmentVariable('Path', 'Machine'),
+               [Environment]::GetEnvironmentVariable('Path', 'User')) | Where-Object { $_ }) -join ';'
+$stale = @($env:Path -split ';' | Where-Object { $_ } | ForEach-Object { $_.TrimEnd('\') } |
+           Where-Object { $sessionPath -notcontains $_ })
+
+function Invoke-Probe([string]$command, [string]$arguments, [int]$timeoutSec) {
+    $app = Get-Command $command -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $app) { return @{ Ok = $false; Text = 'not on PATH' } }
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    if ($app.Source -match '\.(cmd|bat)$') {
+        $psi.FileName = $env:ComSpec
+        $psi.Arguments = '/d /c ""' + $app.Source + '" ' + $arguments + '"'
+    } else {
+        $psi.FileName = $app.Source
+        $psi.Arguments = $arguments
+    }
+    $psi.UseShellExecute = $false
+    # Give the probe its own, already closed standard input. Without this it
+    # inherits this window's console input while running without a console of
+    # its own; sqlmap (Python) then never returns from "--version" here,
+    # although the same command answers at once when typed in the window.
+    $psi.RedirectStandardInput = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+    try { $p = [System.Diagnostics.Process]::Start($psi) }
+    catch { return @{ Ok = $false; Text = "cannot start $($app.Source)" } }
+    try { $p.StandardInput.Close() } catch { }
+    $stdout = $p.StandardOutput.ReadToEndAsync()
+    $stderr = $p.StandardError.ReadToEndAsync()
+    if (-not $p.WaitForExit($timeoutSec * 1000)) {
+        try { $p.Kill() } catch { }
+        return @{ Ok = $false; TimedOut = $true; Path = $app.Source
+                  Text = "no answer within $timeoutSec s ($($app.Source))" }
+    }
+    $first = (($stdout.Result + "`n" + $stderr.Result) -split "`r?`n" |
+              Where-Object { $_.Trim() } | Select-Object -First 1)
+    if ($p.ExitCode -ne 0) { return @{ Ok = $false; Text = "exit code $($p.ExitCode): $first" } }
+    return @{ Ok = $true; Text = "$first" }
+}
+
+# -Lenient: a tool that is on the PATH but whose version probe only times out
+# is reported in yellow and does not fail the check (no lab level depends on
+# its version answer; typing the command in the window still works).
+function Check-Tool([string]$name, [string]$command, [string]$arguments, [int]$timeoutSec = 30, [switch]$Lenient) {
     Write-Host -NoNewline ("{0,-18}" -f $name)
-    try {
-        $global:LASTEXITCODE = 0
-        $out = & $probe 2>&1 | Where-Object { "$_".Trim() } | Select-Object -First 1
-        if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
-        Write-Host "OK    $out" -ForegroundColor Green
-    } catch {
-        Write-Host "MISSING" -ForegroundColor Red
+    $r = Invoke-Probe $command $arguments $timeoutSec
+    if ($r.Ok) {
+        Write-Host "OK    $($r.Text)" -ForegroundColor Green
+    } elseif ($Lenient -and $r.TimedOut) {
+        Write-Host "OK?   $($r.Path) - no version answer within $timeoutSec s; type '$command $arguments' to confirm" -ForegroundColor Yellow
+    } else {
+        Write-Host "MISSING  $($r.Text)" -ForegroundColor Red
         $script:ok = $false
     }
 }
@@ -41,15 +95,15 @@ function Check-Url([string]$name, [string]$url, [switch]$Optional) {
 
 Write-Host "`nCADMUS-CR-14 - sandbox environment check (SC1)`n" -ForegroundColor Cyan
 
-Check-Tool "java"    { java -version }
-Check-Tool "javac"   { javac -version }
-Check-Tool "mvn"     { mvn -v }
-Check-Tool "git"     { git --version }
-Check-Tool "node"    { node --version }
-Check-Tool "npm"     { npm --version }
-Check-Tool "python"  { python --version }
-Check-Tool "snyk"    { snyk --version }
-Check-Tool "sqlmap"  { sqlmap --version }
+Check-Tool "java"    "java"    "-version"
+Check-Tool "javac"   "javac"   "-version"
+Check-Tool "mvn"     "mvn"     "-v"       60
+Check-Tool "git"     "git"     "--version"
+Check-Tool "node"    "node"    "--version"
+Check-Tool "npm"     "npm"     "--version" 60
+Check-Tool "python"  "python"  "--version"
+Check-Tool "snyk"    "snyk"    "--version" 60 -Lenient
+Check-Tool "sqlmap"  "sqlmap"  "--version" 45 -Lenient
 
 Write-Host -NoNewline ("{0,-18}" -f "intellij idea")
 $idea = Get-ChildItem "C:\Program Files\JetBrains" -Directory -Filter "IntelliJ IDEA*" -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -70,6 +124,12 @@ Check-Url "zap ui (OWZ1)"   "http://owz1:8080/zap/"
 Check-Url "vulnshop"        "http://127.0.0.1:8080/actuator/health" -Optional
 
 Write-Host ""
+if ($stale.Count -gt 0) {
+    Write-Host "This window had an outdated PATH ($($stale.Count) folder(s) missing), so the check used" -ForegroundColor Yellow
+    Write-Host "the PATH stored in the registry. Close this window and open a new PowerShell window;" -ForegroundColor Yellow
+    Write-Host "if a tool is still not found there, sign out of Windows and sign in again." -ForegroundColor Yellow
+    Write-Host ""
+}
 if ($ok) { Write-Host "Sandbox ready." -ForegroundColor Green }
 else     { Write-Host "Something is missing or down - raise it now." -ForegroundColor Red }
 Write-Host "vulnshop is DOWN until you start it with tools\run-app.ps1 - that is expected.`n"
